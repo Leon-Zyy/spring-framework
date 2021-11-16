@@ -561,25 +561,37 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
 				// Invoke factory processors registered as beans in the context.
-				invokeBeanFactoryPostProcessors(beanFactory);
+				// BeanFactory准备好了之后，执行BeanFactoryPostProcessor，开始对BeanFactory进行处理
+				// 默认情况下：
+				// 此时BeanFactory的beanDefinitionMap中有6个BeanDefinition. 5个基础BeanDefinition+AppConfig的BeanDefinition
+				// 而这6个中只有一个BeanFactoryPostProcessor: ConfigurationClassPostProcessor
+				// 这里会执行ConfigurationClassPostProcessor进行@Component的扫描. 扫描得到BeanDefinition. 并注册到beanFactory中
+				// 注意: 扫描的过程中可能又回扫描出其他的BeanFactoryPostProcessor. 那么这些BeanFactoryPostProcessor也的在这一步执行
+				invokeBeanFactoryPostProcessors(beanFactory);// scanner.scan()
 
 				// Register bean processors that intercept bean creation.
+				// 将扫描到的BeanPostProcessors实例化并排序，并添加到BeanFactory的beanPostProcessors属性中去
 				registerBeanPostProcessors(beanFactory);
 				beanPostProcess.end();
 
 				// Initialize message source for this context.
+				// 设置ApplicationContext的MessageSource，要么是用户设置的，要么是DelegatingMessageSource
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
+				// 设置ApplicationContext的applicationEventMulticaster,要么是用户设置的，要么是SimpleApplicationEventMulticaster
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
+				//给类的模板方法
 				onRefresh();
 
 				// Check for listener beans and register them.
+				// 把定义的ApplicationListener的Bean对象，设置到ApplicationContext中，并执行在此之前所发布的事件
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
+				// 完成beanFactory初始化-非懒加载的单例
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
@@ -914,6 +926,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
+		// 实例化非懒加载的单例bean
 		beanFactory.preInstantiateSingletons();
 	}
 
