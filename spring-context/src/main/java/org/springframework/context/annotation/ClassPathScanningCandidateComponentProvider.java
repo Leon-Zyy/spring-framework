@@ -195,8 +195,12 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	@SuppressWarnings("unchecked")
 	protected void registerDefaultFilters() {
+
+		// 注册@Component对应的AnnotationTypeFilter
 		this.includeFilters.add(new AnnotationTypeFilter(Component.class));
+
 		ClassLoader cl = ClassPathScanningCandidateComponentProvider.class.getClassLoader();
+
 		try {
 			this.includeFilters.add(new AnnotationTypeFilter(
 					((Class<? extends Annotation>) ClassUtils.forName("jakarta.annotation.ManagedBean", cl)), false));
@@ -420,14 +424,19 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 					logger.trace("Scanning " + resource);
 				}
 				try {
+					// 原数据读取器 使用ASM技术
+					// 原数据读取器可以获取到类的注解、是否抽象类、实现的接口、名字、父类......
 					MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+					// 判断原数据是否是一个类 excludeFilters includeFilters判断
 					if (isCandidateComponent(metadataReader)) {
 						ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 						sbd.setSource(resource);
+
 						if (isCandidateComponent(sbd)) {
 							if (debugEnabled) {
 								logger.debug("Identified candidate component class: " + resource);
 							}
+							// 生成BeanDefinition
 							candidates.add(sbd);
 						}
 						else {
@@ -479,11 +488,15 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * @return whether the class qualifies as a candidate component
 	 */
 	protected boolean isCandidateComponent(MetadataReader metadataReader) throws IOException {
+		// 排除过滤器
 		for (TypeFilter tf : this.excludeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
 				return false;
 			}
 		}
+
+		// 复核includeFilter的会进行条件匹配，通过了才是Bean，也就是先看有没有@Component，再看是否符合@Conditional
+		// 在scanner中注册了一个默认的includeFilters
 		for (TypeFilter tf : this.includeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
 				return isConditionMatch(metadataReader);
@@ -503,6 +516,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 			this.conditionEvaluator =
 					new ConditionEvaluator(getRegistry(), this.environment, this.resourcePatternResolver);
 		}
+		// 传入类上的注解信息 metadataReader.getAnnotationMetadata()
 		return !this.conditionEvaluator.shouldSkip(metadataReader.getAnnotationMetadata());
 	}
 
@@ -516,6 +530,9 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 */
 	protected boolean isCandidateComponent(AnnotatedBeanDefinition beanDefinition) {
 		AnnotationMetadata metadata = beanDefinition.getMetadata();
+		// 1.判断是否是一个独立的类(isIndependent), 比如非静态内部类,内部类不能成为Bean
+		// 2.1 判断是否 非接口，是否 非抽象类(isConcrete), 接口、抽象类不可成为Bean
+		// 2.2 是一个抽象类，并且有@Lookup注解，那么就可以成为一个Bean
 		return (metadata.isIndependent() && (metadata.isConcrete() ||
 				(metadata.isAbstract() && metadata.hasAnnotatedMethods(Lookup.class.getName()))));
 	}

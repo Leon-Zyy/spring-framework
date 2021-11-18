@@ -269,19 +269,27 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
-			// 扫描路径 得到BeanDefinition对象集合
+
+			// 扫描路径 得到BeanDefinition对象集合 - 此BeanDefinition只有BeanName无其他属性
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
+
 			for (BeanDefinition candidate : candidates) {
+				// 解析Scope注解内容
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
+
+				//生成BeanName
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
+
 				if (candidate instanceof AbstractBeanDefinition) {
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
 				if (candidate instanceof AnnotatedBeanDefinition) {
-					// 解析@Lazy @Primary @DependsOn @Role @Description
+					// 解析@Lazy @Primary @DependsOn @Role @Description 等注解
+					// 设置给当前的BeanDefinition(candidate)
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
+				// 检查Spring容器中是否已经存在该beanName
 				if (checkCandidate(beanName, candidate)) {
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
 					definitionHolder =
@@ -301,7 +309,10 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * @param beanName the generated bean name for the given bean
 	 */
 	protected void postProcessBeanDefinition(AbstractBeanDefinition beanDefinition, String beanName) {
+		// 这只BeanDefinition的默认值
 		beanDefinition.applyDefaults(this.beanDefinitionDefaults);
+
+		// AutowireCandidate表示某个Bean能否被用来做依赖注入
 		if (this.autowireCandidatePatterns != null) {
 			beanDefinition.setAutowireCandidate(PatternMatchUtils.simpleMatch(this.autowireCandidatePatterns, beanName));
 		}

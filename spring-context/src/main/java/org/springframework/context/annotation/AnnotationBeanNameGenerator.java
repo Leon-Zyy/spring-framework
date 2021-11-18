@@ -16,12 +16,6 @@
 
 package org.springframework.context.annotation;
 
-import java.beans.Introspector;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -32,6 +26,12 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
+
+import java.beans.Introspector;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link BeanNameGenerator} implementation for bean classes annotated with the
@@ -78,6 +78,7 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 	@Override
 	public String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry) {
 		if (definition instanceof AnnotatedBeanDefinition) {
+			// 获取注解锁指定的beanName
 			String beanName = determineBeanNameFromAnnotation((AnnotatedBeanDefinition) definition);
 			if (StringUtils.hasText(beanName)) {
 				// Explicit bean name found.
@@ -107,7 +108,8 @@ public class AnnotationBeanNameGenerator implements BeanNameGenerator {
 				});
 				if (isStereotypeWithNameValue(type, metaTypes, attributes)) {
 					Object value = attributes.get("value");
-					if (value instanceof String strVal) {
+					if (value instanceof String) {
+						String strVal = (String) value;
 						if (StringUtils.hasLength(strVal)) {
 							if (beanName != null && !strVal.equals(beanName)) {
 								throw new IllegalStateException("Stereotype annotations suggest inconsistent " +
