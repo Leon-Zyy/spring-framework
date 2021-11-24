@@ -279,6 +279,8 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				candidate.setScope(scopeMetadata.getScopeName());
 
 				//生成BeanName
+				// 如果@Component有value指定beanName直接返回
+				// 如果@Component没有value，则使用java.beans.Introspector类decapitalize方法生产beanName
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
 
 				if (candidate instanceof AbstractBeanDefinition) {
@@ -291,10 +293,13 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				}
 				// 检查Spring容器中是否已经存在该beanName
 				if (checkCandidate(beanName, candidate)) {
+					// 如果存在，将beanName和candidate封装成一个BeanDefinitionHolder
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
+
+					// 注册到beanDefinitionMap中
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}
@@ -342,14 +347,19 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * bean definition has been found for the specified name
 	 */
 	protected boolean checkCandidate(String beanName, BeanDefinition beanDefinition) throws IllegalStateException {
+		// 判断Spring容器中是否有当前bean，没有直接返回true
 		if (!this.registry.containsBeanDefinition(beanName)) {
 			return true;
 		}
+		// ****一般情况下@Component value命名重复会走下面逻辑并抛错**************
+		// 判读Spring容器中是否存在当前beanName的Bean
 		BeanDefinition existingDef = this.registry.getBeanDefinition(beanName);
 		BeanDefinition originatingDef = existingDef.getOriginatingBeanDefinition();
 		if (originatingDef != null) {
 			existingDef = originatingDef;
 		}
+		// 是否兼容，如果兼容返回false表示不会重新注册到Spring容器中，如果不冲突则会抛异常
+		// 解决同一包路径扫描俩次的情况下
 		if (isCompatible(beanDefinition, existingDef)) {
 			return false;
 		}

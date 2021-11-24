@@ -365,11 +365,20 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		return null;
 	}
 
+	/**
+	 * 自定义加载 指定加载
+	 * META-INF下添加spring.components中添加
+	 * com.xxx.xxx=org.springframework.stereotype.Component
+	 * @param index
+	 * @param basePackage
+	 * @return
+	 */
 	private Set<BeanDefinition> addCandidateComponentsFromIndex(CandidateComponentsIndex index, String basePackage) {
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
 			Set<String> types = new HashSet<>();
 			for (TypeFilter filter : this.includeFilters) {
+				// Component注解
 				String stereotype = extractStereotype(filter);
 				if (stereotype == null) {
 					throw new IllegalArgumentException("Failed to extract stereotype from " + filter);
